@@ -23,16 +23,16 @@ sat(CNF,I,M):-
 %  - si hi ha una clausula unitaria sera aquest literal, sino
 %  - un qualsevol o el seu negat.
 % ...
-unitaria(F, Lit) :-
-  member(H, F),
-  length(H, 1) -> Lit is H.
-
 tria(F, Lit) :-
-  %Iterem sobre tots els mebres de F
-  Aux = [],
+% Iterem sobre tots els mebres de F %
   unitaria(F, X) ->
     Lit is X;
     [[Lit|_]|_] = F.
+
+unitaria(F, Lit) :-
+% Retorna la clàusula unitària si n'hi ha %
+  member(H, F),
+  length(H, 1) -> Lit is H.
 
 %%%%%%%%%%%%%%%%%%%%%
 % simlipf(Lit, F, FS)
@@ -41,6 +41,22 @@ tria(F, Lit) :-
 %  - sense les clausules que tenen lit
 %  - treient -Lit de les clausules on hi es, si apareix la clausula buida fallara.
 % ...
+%%%%% Simplify test %%%%%%
+simplif(_, [], FS) :- FS = [], !.
+simplif(Lit, [H|T], FS) :-
+  simp_clausula(Lit, H, NewH) ->
+    simplif(Lit, T, X), FS = [NewH|X];
+    simplif(Lit, T, FS).
+
+simp_clausula(_, [], LS) :- LS = [], !.
+simp_clausula(Lit, [H|T], LS) :-
+  Lit =\= H ->
+    (Lit =:= -H ->
+      LS = T;
+      simp_clausula(Lit, T, X), LS = [H|X]
+    ).
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

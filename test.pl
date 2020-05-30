@@ -44,12 +44,30 @@ unitaria(F, Lit) :-
 
 tria(F, Lit) :-
   %Iterem sobre tots els mebres de F
-  Aux = [],
   unitaria(F, X) ->
     Lit is X;
     [[Lit|_]|_] = F.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-caca(X) :- tria2([[-1,5],[-2,3],[1,5,6,-2],[5]], X).
+test1(X) :- tria([[-1,5],[-2,3],[1,5,6,-2]], X).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%% Simplify test %%%%%%
+simplif(_, [], FS) :- FS = [], !.
+simplif(Lit, [H|T], FS) :-
+  simp_clausula(Lit, H, NewH) ->
+    simplif(Lit, T, X), FS = [NewH|X];
+    simplif(Lit, T, FS).
+
+simp_clausula(_, [], LS) :- LS = [], !.
+simp_clausula(Lit, [H|T], LS) :-
+  Lit =\= H ->
+    (Lit =:= -H ->
+      LS = T;
+      simp_clausula(Lit, T, X), LS = [H|X]
+    ).
+
+
+test2(X) :- simplif(1,[[-1,5],[2,3],[1,5],[-2,3],[1,5,6,-2]], X), !.
+%[-1,5],[1,5],[-2,3],[1,5,6,-2]
