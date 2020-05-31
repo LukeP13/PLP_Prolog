@@ -41,14 +41,19 @@ unitaria(F, Lit) :-
 %  - sense les clausules que tenen lit
 %  - treient -Lit de les clausules on hi es, si apareix la clausula buida fallara.
 % ...
-%%%%% Simplify test %%%%%%
 simplif(_, [], FS) :- FS = [], !.
+
 simplif(Lit, [H|T], FS) :-
   simp_clausula(Lit, H, NewH) ->
-    simplif(Lit, T, X), FS = [NewH|X];
+    ([] = NewH -> %% Si trobem la clàusula buida sortim
+      fail;
+      simplif(Lit, T, X), FS = [NewH|X]
+    );
     simplif(Lit, T, FS).
 
+
 simp_clausula(_, [], LS) :- LS = [], !.
+
 simp_clausula(Lit, [H|T], LS) :-
   Lit =\= H ->
     (Lit =:= -H ->
