@@ -10,10 +10,18 @@ sat(CNF,I,M):-
    tria(CNF,Lit),
 
    % Simplifica la CNF amb el Lit triat (compte pq pot fallar, es a dir si troba la clausula buida fallara i fara backtraking).
-   simplif(Lit,CNF,CNFS),
+   simplif(Lit,CNF,CNFS) ->
+      (sat(CNFS, [Lit|I], M) -> !;
+        (
+        NewI is -Lit,
+        simplif(-Lit, CNF, CNFSS),
+        sat(CNFSS, [NewI|I], M))
+        )
+      ;(fail, !).
 
    % crida recursiva amb la CNF i la interpretacio actualitzada
-   sat(... , ... ,M).
+
+
 
 
 %%%%%%%%%%%%%%%%%%
@@ -96,12 +104,12 @@ simp_clausula(Lit, [H|T], LS) :-
 % Arestes es la llista d'arestes del graph com a parelles de nodes
 % Inici es la llista de parelles (node,num_color) que s'han de forçar
 % C sera la CNF que codifica graph coloring problem pel graph donat
-codifica(N,K,Arestes,Inici,C):-
-   crear la llista de llistes de variables pels colors de cada node
-   crear la CNF que fa que cada node tingui un color
-   crear la CNF que força els colors dels nodes segons Inici
-   crear la CNF que fa que dos nodes que es toquen tinguin colors diferents
-   C sera el resultat d'ajuntar les CNF creades
+codifica(N,K,Arestes,Inici,C):-!.
+   %crear la llista de llistes de variables pels colors de cada node
+   %crear la CNF que fa que cada node tingui un color
+   %crear la CNF que força els colors dels nodes segons Inici
+   %crear la CNF que fa que dos nodes que es toquen tinguin colors diferents
+   %C sera el resultat d'ajuntar les CNF creades
 
 
 
@@ -113,10 +121,10 @@ codifica(N,K,Arestes,Inici,C):-
 resol(N,K,A, I):-
    codifica(...),
    write('SAT Solving ..................................'), nl,
-   crida a SAT
-   write('Graph (color number per node in order: '), nl,
-   mostrar el resultat
-
+   %crida a SAT
+   write('Graph (color number per node in order: '), nl
+   %mostrar el resultat
+   .
 
 
 %%%%%%%%%%%%%%%%%%%%
