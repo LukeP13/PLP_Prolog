@@ -10,10 +10,17 @@ sat(CNF,I,M):-
    tria(CNF,Lit),
 
    % Simplifica la CNF amb el Lit triat (compte pq pot fallar, es a dir si troba la clausula buida fallara i fara backtraking).
-   simplif(Lit,CNF,CNFS),
+   simplif(Lit,CNF,CNFS) ->
+      (
+      % crida recursiva amb la CNF i la interpretacio actualitzada
+      sat(CNFS, [Lit|I], M) -> !;
+        % En cas de donar no possible, probem amb el Lit negat
+        NewI is -Lit,
+        simplif(-Lit, CNF, CNFSS),
+        sat(CNFSS, [NewI|I], M)
+      ).
 
-   % crida recursiva amb la CNF i la interpretacio actualitzada
-   sat(... , ... ,M).
+
 
 
 %%%%%%%%%%%%%%%%%%
@@ -41,18 +48,20 @@ unitaria(F, Lit) :-
 %  - sense les clausules que tenen lit
 %  - treient -Lit de les clausules on hi es, si apareix la clausula buida fallara.
 % ...
-simplif(_, [], FS) :- FS = [], !.
+simplif(_, [], []) :- !.
 
 simplif(Lit, [H|T], FS) :-
   simp_clausula(Lit, H, NewH) ->
-    ([] = NewH -> %% Si trobem la clàusula buida sortim
+    (
+    % Si trobem la clàusula buida sortim, altrament afegim la modificada
+    [] = NewH ->
       fail;
       simplif(Lit, T, X), FS = [NewH|X]
     );
-    simplif(Lit, T, FS).
+    simplif(Lit, T, FS). %
 
 
-simp_clausula(_, [], LS) :- LS = [], !.
+simp_clausula(_, [], []) :- !.
 
 simp_clausula(Lit, [H|T], LS) :-
   Lit =\= H ->
@@ -72,23 +81,54 @@ simp_clausula(Lit, [H|T], LS) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-%%%%%%%%%%%%%%%%%%%
 % unCert(L,CNF)
 % Donat una llista de variables booleanes,
 % -> el segon parametre sera la CNF que codifica que exactament una sigui certa.
 % ... pots crear i utilitzar els auxiliars comaminimUn i nomesdUn
+unCert(L, CNF) :-
+  comaminimUn(L,X),
+  nomesdUn(L, Y),
+  append(X,Y,CNF).
 
 %%%%%%%%%%%%%%%%%%%
 % comaminimUn(L,CNF)
 % Donat una llista de variables booleanes,
 % -> el segon parametre sera la CNF que codifica que com a minim una sigui certa.
-% ...
+% Unicament hem de ficar aquesta llista dins una altra llista, aixo creara un sat amb minim
+%  un valor de L positiu.
+comaminimUn(L,[L]) :- !.
 
 %%%%%%%%%%%%%%%%%%%
 % nomesdUn(L,CNF)
 % Donat una llista de variables booleanes,
 % -> el segon parametre sera la CNF que codifica que com a molt una sigui certa.
-% ...
+% Per codificar aquest CNF agafarem totes les possibles combinacions de parelles de nombres de L en negatiu.
+% Forma: [[-H,-T1],[-H,-T2]]..
+nomesdUn([], []) :- !.
+
+nomesdUn([H|T],CNF) :-
+  nomesdUn(T, X),
+  invertNums([H|T], [Hneg|Tneg]),
+  creaCombi(Hneg, Tneg, Combi),
+  append(Combi, X, CNF).
+
+%%%%%%%%%%%%%%%%%%%
+% invertNums(L, LS)
+% Donat una llista de variables booleanes,
+% -> el segon parametre serà la llista amb els elements negats
+invertNums([], []) :- !.
+
+invertNums([H|T], [Hinv|Tinv]) :-
+  Hinv is -H,
+  invertNums(T, Tinv).
+
+%%%%%%%%%%%%%%%%%%
+% creaCombi(N, L, LS)
+% Donat una variable booleana i una llista de variables booleanes
+% -> El tercer paràmetre sera la llista amb totes les possibles combinacions
+creaCombi(_, [], []) :- !.
+
+creaCombi(N, [H|T], [[N,H]|F]) :- creaCombi(N, T, F).
 
 %%%%%%%%%%%%%%%%%%%
 % els nodes del graph son nombres consecutius d'1 a N.
@@ -96,12 +136,12 @@ simp_clausula(Lit, [H|T], LS) :-
 % Arestes es la llista d'arestes del graph com a parelles de nodes
 % Inici es la llista de parelles (node,num_color) que s'han de forçar
 % C sera la CNF que codifica graph coloring problem pel graph donat
-codifica(N,K,Arestes,Inici,C):-
-   crear la llista de llistes de variables pels colors de cada node
-   crear la CNF que fa que cada node tingui un color
-   crear la CNF que força els colors dels nodes segons Inici
-   crear la CNF que fa que dos nodes que es toquen tinguin colors diferents
-   C sera el resultat d'ajuntar les CNF creades
+codifica(N,K,Arestes,Inici,C):-!.
+   %crear la llista de llistes de variables pels colors de cada node
+   %crear la CNF que fa que cada node tingui un color
+   %crear la CNF que força els colors dels nodes segons Inici
+   %crear la CNF que fa que dos nodes que es toquen tinguin colors diferents
+   %C sera el resultat d'ajuntar les CNF creades
 
 
 
@@ -113,10 +153,10 @@ codifica(N,K,Arestes,Inici,C):-
 resol(N,K,A, I):-
    codifica(...),
    write('SAT Solving ..................................'), nl,
-   crida a SAT
-   write('Graph (color number per node in order: '), nl,
-   mostrar el resultat
-
+   %crida a SAT
+   write('Graph (color number per node in order: '), nl
+   %mostrar el resultat
+   .
 
 
 %%%%%%%%%%%%%%%%%%%%
