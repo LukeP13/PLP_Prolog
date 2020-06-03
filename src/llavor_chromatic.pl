@@ -3,24 +3,16 @@
 % sat(F,I,M)
 % si F es satisfactible, M sera el model de F afegit a la interpretacio I (a la primera crida I sera buida).
 % Assumim invariant que no hi ha literals repetits a les clausules ni la clausula buida inicialment.
-
 sat([],I,I):-     write('SAT!!'),nl,!.
 sat(CNF,I,M):-
    % Ha de triar un literal d’una clausula unitaria, si no n’hi ha cap, llavors un literal pendent qualsevol.
    tria(CNF,Lit),
 
    % Simplifica la CNF amb el Lit triat (compte pq pot fallar, es a dir si troba la clausula buida fallara i fara backtraking).
-   simplif(Lit,CNF,CNFS) ->
-      (
-      % crida recursiva amb la CNF i la interpretacio actualitzada
-      sat(CNFS, [Lit|I], M) -> !;
-        % En cas de donar no possible, probem amb el Lit negat
-        NewI is -Lit,
-        simplif(-Lit, CNF, CNFSS),
-        sat(CNFSS, [NewI|I], M)
-      ).
+   simplif(Lit,CNF,CNFS),
 
-
+   % crida recursiva amb la CNF i la interpretacio actualitzada
+   sat(CNFS, [Lit|I], M).
 
 
 %%%%%%%%%%%%%%%%%%
@@ -29,17 +21,39 @@ sat(CNF,I,M):-
 % -> el segon parametre sera un literal de CNF
 %  - si hi ha una clausula unitaria sera aquest literal, sino
 %  - un qualsevol o el seu negat.
-% ...
+%
+% (Si trobem clàusules unitàries)
+%  -> Podriem escollir múltiples clàusules unitàries, però si la primera falla no arreglarem
+%     el problema cambiant de clàusula unitària. Per tant només comprovarem el primer trobat.
+%
+% (Si no trobem clàusula unitària)
+%  -> Triarem el primer booleà o el seu negat
 tria(F, Lit) :-
-% Iterem sobre tots els mebres de F %
   unitaria(F, X) ->
+    % Si trobem la clàusula unitària l'escollim
     Lit is X;
-    [[Lit|_]|_] = F.
+    % Altrament, escollim el primer booleà o el seu negat
+    [[P|_]|_] = F, invAbs(P, Lit).
 
+
+%%%%%%%%%%%%%%%%%%%%%
+% unitaria(F, Lit)
+% Donat uana CNF,
+% -> El segon parametre qualsevol de les clàusules unitàries
 unitaria(F, Lit) :-
-% Retorna la clàusula unitària si n'hi ha %
   member(H, F),
-  length(H, 1) -> Lit is H.
+  length(H, 1),
+  Lit is H.
+
+%%%%%%%%%%%%%%%%%%%%%
+% invAbs(X, Y)
+% Donat un nombre en valor absolut X,
+% -> El segon parametre sera qualsevol dels valors en positiu o negatiu de tal nombre
+%
+% Ens permet obtenir un nombre en positiu i negatiu
+invAbs(X, Y):- Y is X.
+invAbs(X, Y):- Y is -X.
+
 
 %%%%%%%%%%%%%%%%%%%%%
 % simlipf(Lit, F, FS)
@@ -47,31 +61,36 @@ unitaria(F, Lit) :-
 % -> el tercer parametre sera la CNF que ens han donat simplificada:
 %  - sense les clausules que tenen lit
 %  - treient -Lit de les clausules on hi es, si apareix la clausula buida fallara.
-% ...
 simplif(_, [], []) :- !.
-
 simplif(Lit, [H|T], FS) :-
   simp_clausula(Lit, H, NewH) ->
-    (
-    % Si trobem la clàusula buida sortim, altrament afegim la modificada
-    [] = NewH ->
-      fail;
+    ([] = NewH ->
+      % Si trobem la clàusula buida sortim, altrament afegim la modificada
+      fail, !;
+      % Altrament, simplifiquem la resta de clàusules i afegim la que hem reduït al principi
       simplif(Lit, T, X), FS = [NewH|X]
     );
-    simplif(Lit, T, FS). %
+    % Si no retorna clàusula simplificada, simplifiquem la resta
+    simplif(Lit, T, FS).
 
 
+%%%%%%%%%%%%%%%%%%%%%
+% simp_clausula(Lit, L, LS)
+% Donada una literal Lit i una clàusula
+% -> El tercer parametre sera la clàusula simplificada:
+%   - Fallarà si troba la clàusula
+%   - Eliminarà el -Lit si el troba, aqui pot aparèixer la clàusula buida
 simp_clausula(_, [], []) :- !.
-
 simp_clausula(Lit, [H|T], LS) :-
+  % Si trobem el nombre, fallà ja que s'elimina la clàusula
   Lit =\= H ->
     (Lit =:= -H ->
+      % Si trobem el nombre en negat ja podrem
       LS = T;
       simp_clausula(Lit, T, X), LS = [H|X]
-    ).
+    ); fail, !.
 
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -80,7 +99,7 @@ simp_clausula(Lit, [H|T], LS) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
+%%%%%%%%%%%%%%%%%%%%%
 % unCert(L,CNF)
 % Donat una llista de variables booleanes,
 % -> el segon parametre sera la CNF que codifica que exactament una sigui certa.
@@ -90,7 +109,7 @@ unCert(L, CNF) :-
   nomesdUn(L, Y),
   append(X,Y,CNF).
 
-%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%
 % comaminimUn(L,CNF)
 % Donat una llista de variables booleanes,
 % -> el segon parametre sera la CNF que codifica que com a minim una sigui certa.
@@ -98,14 +117,13 @@ unCert(L, CNF) :-
 %  un valor de L positiu.
 comaminimUn(L,[L]) :- !.
 
-%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%
 % nomesdUn(L,CNF)
 % Donat una llista de variables booleanes,
 % -> el segon parametre sera la CNF que codifica que com a molt una sigui certa.
 % Per codificar aquest CNF agafarem totes les possibles combinacions de parelles de nombres de L en negatiu.
 % Forma: [[-H,-T1],[-H,-T2]]..
 nomesdUn([], []) :- !.
-
 nomesdUn([H|T],CNF) :-
   nomesdUn(T, X),
   invertNums([H|T], [Hneg|Tneg]),
@@ -117,7 +135,6 @@ nomesdUn([H|T],CNF) :-
 % Donat una llista de variables booleanes,
 % -> el segon parametre serà la llista amb els elements negats
 invertNums([], []) :- !.
-
 invertNums([H|T], [Hinv|Tinv]) :-
   Hinv is -H,
   invertNums(T, Tinv).
@@ -127,8 +144,15 @@ invertNums([H|T], [Hinv|Tinv]) :-
 % Donat una variable booleana i una llista de variables booleanes
 % -> El tercer paràmetre sera la llista amb totes les possibles combinacions
 creaCombi(_, [], []) :- !.
-
 creaCombi(N, [H|T], [[N,H]|F]) :- creaCombi(N, T, F).
+
+%--------------------------------- DONE FINS AQUI ----------------------------------%
+
+
+
+
+
+
 
 %%%%%%%%%%%%%%%%%%%
 % els nodes del graph son nombres consecutius d'1 a N.

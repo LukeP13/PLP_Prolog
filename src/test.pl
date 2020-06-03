@@ -37,16 +37,24 @@ count_up(Low, High) :-
   between(Low, High, Y),
   write(Y), nl.
 
-%%%% Llavor Cromàtic TRIA %%%%% OK
+%%%% Llavor Cromàtic TRIA %%%%% OKK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+invAbs(X, Y):- Y is X.
+invAbs(X, Y):- Y is -X.
+
 unitaria(F, Lit) :-
   member(H, F),
-  length(H, 1) -> Lit is H.
+  length(H, 1),
+  Lit is H.
 
+% (Si trobem clàusules unitàries) Podriem escollir múltiples clàusules unitàries, però si una falla no arreglarem
+%  el problema cambiant de clàusula unitària. Per tant si el primer falla, no agafarem els següents
 tria(F, Lit) :-
-  %Iterem sobre tots els mebres de F
   unitaria(F, X) ->
+    % Si trobem la clàusula unitària l'escollim
     Lit is X;
-    [[Lit|_]|_] = F.
+    % Altrament, escollim el primer booleà o el seu negat
+    [[P|_]|_] = F, invAbs(P, Lit).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 test1(X) :- tria([[-1,5],[-2,3],[1,5,6,-2]], X).
@@ -55,47 +63,46 @@ test1(X) :- tria([[-1,5],[-2,3],[1,5,6,-2]], X).
 
 %%%%% Simplify test %%%%%%
 simplif(_, [], []) :- !.
-
 simplif(Lit, [H|T], FS) :-
   simp_clausula(Lit, H, NewH) ->
-    (% Si trobem la clàusula buida sortim, altrament afegim la modificada
-    [] = NewH ->
-      fail;
+    ([] = NewH ->
+      % Si trobem la clàusula buida sortim, altrament afegim la modificada
+      fail, !;
+      % Altrament, simplifiquem la resta de clàusules i afegim la que hem reduït al principi
       simplif(Lit, T, X), FS = [NewH|X]
     );
-    simplif(Lit, T, FS). %
+    % Si no retorna clàusula simplificada, simplifiquem la resta
+    simplif(Lit, T, FS).
 
 
 simp_clausula(_, [], []) :- !.
-
 simp_clausula(Lit, [H|T], LS) :-
+  % Si trobem el nombre, fallà ja que s'elimina la clàusula
   Lit =\= H ->
     (Lit =:= -H ->
+      % Si trobem el nombre en negat ja podrem
       LS = T;
       simp_clausula(Lit, T, X), LS = [H|X]
-    ).
+    ); fail, !.
 
 test2(X) :- simplif(1,[[1,5]], X), !.
 %[2,3],[1,5],[-2,3,-1],[1,5,6,-2]
 
-%%%%%%% TEST SAT %%%%%%%%%%%%
+%%%%%%% TEST SAT %%%%%%%%%%%% OKKK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 sat([],I,I):-     write('SAT!!'),nl,!.
 sat(CNF,I,M):-
    % Ha de triar un literal d’una clausula unitaria, si no n’hi ha cap, llavors un literal pendent qualsevol.
    tria(CNF,Lit),
 
    % Simplifica la CNF amb el Lit triat (compte pq pot fallar, es a dir si troba la clausula buida fallara i fara backtraking).
-   simplif(Lit,CNF,CNFS) ->
-      (% crida recursiva amb la CNF i la interpretacio actualitzada
-      sat(CNFS, [Lit|I], M) -> !;
-        % En cas de donar no possible, probem amb el Lit negat
-        NewI is -Lit,
-        simplif(-Lit, CNF, CNFSS),
-        sat(CNFSS, [NewI|I], M)
-      ).
+   simplif(Lit,CNF,CNFS),
+
+   % crida recursiva amb la CNF i la interpretacio actualitzada
+   sat(CNFS, [Lit|I], M).
 
 testSat(X) :- sat([[1,2,3,4],[-1,-2],[-1,-3],[-1,-4],[-2,-3],[-2,-4],[-3,-4]], [], X).
 testSat2(X) :- sat([[1],[2,-3, 4],[-2,3],[4,5],[-2,-3]], [], X).
+testSat3(X) :- sat([[1],[2],[-2,-1]], [], X).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% UnCert Test  %%%%%%%%%%%%
