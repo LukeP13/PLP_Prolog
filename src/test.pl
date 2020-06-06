@@ -161,9 +161,131 @@ testUn2(X) :- unCert([1,2,3,4], Y), sat(Y, [], X).
 %------------------------------------------ TESTED -------------------------------------------------%
 
 
-
+% LLV -> [[1,2,3],[4,5,6],[7,8,9]]
+% Ini -> [(n, color)|T]
+% CNF -> [[1],[1,2],[unCert]...]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % inicialitza(LLV, Ini, CNF)
 %
 %
-inicialitza(LLV,Ini,CNF):- !.
+inicialitza(_, [], []) :- !.
+
+%Afegim el color que ens demana com a clàusula unitaria per assegurar que es cumplirà
+inicialitza(LLV, [(N, Color)|T], [[NColor]|CNF]) :-
+    %Agafem la Llista del color que toca dins LLV
+    nth1(N, LLV, LV),
+
+    %Agafem el primer valor
+    nth1(Color, LV, NColor),
+
+    %Creem el cnf per els seguents vertex
+    inicialitza(LLV, T, CNFresta),
+
+    %Creem la llista on només 1 pugui ser cert
+    unCert(LV, CNFun),
+
+    %Unim les llistes
+    append(CNFun, CNFresta, CNF).
+
+
+testInic(X) :- inicialitza([[1,2,3],[4,5,6],[7,8,9]],[(1,3),(2,2),(3,2)],X).
+
+
+
+
+%------------------------------------------ TESTED -------------------------------------------------%
+%%%%%%%%%%%%%%%%%%%%%
+% seguent(LA, O, S)
+% Donat una llista d'arestes LA i un punt origen O:
+% -> S és qualsevol dels següents vèrtex als quals podem anar
+seguent(LA, O, S) :-
+  member((I, F), LA),
+  inside(O, S, I, F).
+
+inside(O, S, O, S).
+inside(O, S, S, O).
+
+
+oneToMax(N, N, N) :- !.
+oneToMax(N, Max, N).
+oneToMax(N, Max, M) :- NS is N+1, oneToMax(NS, Max, M).
+
+hasColor([], _, _) :- !, fail.
+hasColor([(V, Color)|_], V, Color) :- !.
+hasColor([(V, _)|T], V, Color) :- !, fail.
+hasColor([(VS, N)|T], V, Color) :- hasColor(T, V, Color).
+
+
+segNotHaveColor([], _, _, _):- !.
+segNotHaveColor(_, [], _, _):- !.
+segNotHaveColor(LS, Arestes, N, Color):-
+  seguent(Arestes, N, Seg),
+  hasColor(LS, Seg, Color), !,
+  fail.
+segNotHaveColor(_, _, _, _).
+
+
+creaArestes(0, Arestes, []) :- !.
+creaArestes(N, Arestes, L) :-
+  NS is N-1,
+  creaArestes(NS, Arestes, LS),
+  oneToMax(1, N, Color),
+  segNotHaveColor(LS, Arestes, N, Color),
+  L = [(N, Color)|LS].
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% fesMutexes(LLV, Arestes, CNF)
+%
+fesMutexes(LLV, Arestes, CNF) :-
+  length(LLV, N),
+  creaArestes(N, Arestes, LS), !,
+  inicialitza(LLV, LS, CNF).
+
+llista(F, F, []) :- !.
+llista(I, F, [I|LS]) :-
+  IS is I+1,
+  llista(IS, F, LS).
+
+creaLLV(0, _, I, I) :- !.
+creaLLV(N, K, LLS, I) :-
+  Ini is ((N-1)*K)+1,
+  Fi is Ini+K,
+  llista(Ini, Fi, L),
+  NS is N-1,
+  creaLLV(NS, K, [L|LLS], I).
+
+
+
+codifica(N, K, Arestes, Inici, CNF) :-
+  creaLLV(N, K, [], LLV),
+  inicialitza(LLV, Inici, CNFI), !,
+  fesMutexes(LLV, Arestes, CNFM),
+  append(CNFI, CNFM, F),
+  sat(F, [], I),
+  CNF = F.
+
+
+resol(N, Arestes, Inici) :-
+  oneToMax(1, N, Count),
+  codifica(N, Count, Arestes, Inici, CNF),
+  m(CNF, Count, 1).
+
+m(CNF, C, N):- sat(CNF, [], Sol), mostraSol(Sol, C, 1), !, fail.
+
+mostraSol(Sol, Max, N) :-
+  format('color ~w: ', [N]),
+  member(M, Sol),
+  M > 0,
+  N-1 =:= (M-1) mod Max,
+  V is (M-1)//Max + 1,
+  format(' ~w ',[V]), fail.
+
+mostraSol(_, N, N) :- !.
+mostraSol(Sol, Max, N) :- NS is N+1, nl, mostraSol(Sol, Max, NS).
+
+
+
+
+%

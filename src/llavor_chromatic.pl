@@ -146,13 +146,31 @@ invertNums([H|T], [Hinv|Tinv]) :-
 creaCombi(_, [], []) :- !.
 creaCombi(N, [H|T], [[N,H]|F]) :- creaCombi(N, T, F).
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% inicialitza(LLV, Ini, CNF)
+%
+%
+inicialitza(_, [], []) :- !.
+
+%Afegim el color que ens demana com a clàusula unitaria per assegurar que es cumplirà
+inicialitza(LLV, [(N, Color)|T], [[NColor]|CNF]) :-
+    %Agafem la Llista del color que toca dins LLV
+    nth1(N, LLV, LV),
+
+    %Agafem el primer valor
+    nth1(Color, LV, NColor),
+
+    %Creem el cnf per els seguents vertex
+    inicialitza(LLV, T, CNFresta),
+
+    %Creem la llista on només 1 pugui ser cert
+    unCert(LV, CNFun),
+
+    %Unim les llistes
+    append(CNFun, CNFresta, CNF).
+
 %--------------------------------- DONE FINS AQUI ----------------------------------%
-
-
-
-
-
-
 
 %%%%%%%%%%%%%%%%%%%
 % els nodes del graph son nombres consecutius d'1 a N.
