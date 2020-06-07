@@ -236,9 +236,6 @@ segColorList(LS, [_|T], V, LSeg) :- segColorList(LS, T, V, LSeg).
 % -> El quart paràmetre és el color escollit (El primer que està lliure)
 %%%%%
 % **** MODES ****
-% - Totes: Utilitzarem de màxim el nombre Max, que serà el nombre d'Arestes
-%          en el nostre cas particular, això ens donarà totes les possibles
-%          respostes.
 %
 % - OneSolution: Tallarem al primer nombre trobat, donarà la resposta mes
 %                ràpida, però no ens assegura trobar solució, ni ferho amb
@@ -249,8 +246,7 @@ segColorList(LS, [_|T], V, LSeg) :- segColorList(LS, T, V, LSeg).
 %
 
 % Tallem les possibles solucions
-firstNotIn(L, N, Max, X) :- mode(totes), N > Max, !, fail.
-firstNotIn(L, N, Max, X) :- not(mode(totes)), length(L, Len), N > Len+1, !, fail.
+firstNotIn(L, N, Max, X) :- length(L, Len), N > Len+1, !, fail.
 
 % Part principal - Si N és dins L, busquem el seguent
 firstNotIn(L, N, Max, Res) :-
@@ -274,11 +270,6 @@ firstNotIn(L, N, M, X) :- NS is N+1, firstNotIn(L, NS, M, X).
 %    cada vertex tingui un color diferent als seus adjacents
 %
 %  **** MODES ****
-%  - Totes: El color dels vertex pot ser qualsevol d'entre 1 i
-%           el nombre de vertex
-%
-%  - Normal: El color dels vertex pot arribar com a màxim al nombre
-%            de vèrtex adjacents que té
 %
 %  - Fast: El color dels vertex pot arribar com a màxim al nombre de
 %          colors diferents dels seus adjacents
@@ -286,23 +277,6 @@ firstNotIn(L, N, M, X) :- NS is N+1, firstNotIn(L, NS, M, X).
 
 % Amb 0 vèrtex tenim 0 colors, para inmersio
 triaColors(0, Max, Arestes, []) :- !.
-
-% MODE TOTES/NORMAL
-triaColors(N, Max, Arestes, [(N, Color)|LS]) :-
-  % Comprovem que estigui en mode totes o normal
-  mode(X),
-  member(X, [totes, normal]),
-
-  % Triem els colors dels seguents vèrtex
-  NS is N-1, !,
-  triaColors(NS, Max, Arestes, LS),
-
-  % Creem la llista de colors dels vèrtex seguents
-  segColorList(LS, Arestes, N, LSeg),
-
-  % Triem un color
-  firstNotIn(LSeg, 1, Max, Color)
-  .
 
 % MODE FAST
 triaColors(N, Max, Arestes, [(N, Color)|LS]) :-
@@ -323,6 +297,34 @@ triaColors(N, Max, Arestes, [(N, Color)|LS]) :-
   firstNotIn(LSeg, 1, Max, Color)
   .
 
+% ----------------------------------------------------------------------%;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% parellsUnCert(LA, LB, CNF)
+%
+parellsUnCert([], _, []) :- !.
+parellsUnCert(_, [], []) :- !.
+
+parellsUnCert([LA|TA], [LB|TB], CNF) :-
+  nomesdUn([LA, LB], F),
+  parellsUnCert(TA, TB, FS),
+  append(F, FS, CNF).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% totesMutexes(LLV, Arestes, CNF)
+%
+%
+
+totesMutexes(_, [], []) :- !.
+
+totesMutexes(LLV, [(A, B)|LA], CNF) :-
+  nth1(A, LLV, AL),
+  nth1(B, LLV, BL),
+  parellsUnCert(AL, BL, F),
+  totesMutexes(LLV, LA, FS),
+  append(F, FS, CNF).
+
+% ----------------------------------------------------------------------%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % fesMutexes(LLV, Arestes, CNF)
@@ -334,11 +336,16 @@ fesMutexes(LLV, Arestes, CNF) :-
   % Busquem el nombre de Nodes que tenim (igual a la longitud de LLV)
   length(LLV, N),
 
-  % Creem la llista de colors per a cada vèrtex
-  triaColors(N, N, Arestes, LS),
+  (mode(totes) ->
+    totesMutexes(LLV, Arestes, CNF);
 
-  % Creem el CNF amb els colors trobats
-  inicialitza(LLV, LS, CNF).
+    (% Creem la llista de colors per a cada vèrtex
+    triaColors(N, N, Arestes, LS),
+
+    % Creem el CNF amb els colors trobats
+    inicialitza(LLV, LS, CNF)
+    )
+  ).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -451,7 +458,7 @@ resol(N,K,A, I):- !,
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % setMode(Mode)
-% Modes: 116-totes, 110-normal, 102-fast, 120-oneSolution.
+% Modes: 116-totes, 102-fast, 120-oneSolution.
 % Donat un caràcter ASCII:
 % -> "activa" el mode en concret
 
@@ -467,10 +474,6 @@ setMode(120) :- write('-- MODE UNA SOLUCIO --'), nl, !.
 %% Mode Totes %%
 setMode(116) :- not(mode(totes)), asserta(mode(totes)), setMode(116).
 setMode(116) :- write('--- BUSCANT TOTES LES SOLUCIONS, JO M\'ANIRIA A FER UN CAFE... ---'), nl, !.
-
-%% Mode Normal %%
-setMode(110) :- not(mode(normal)), asserta(mode(normal)), setMode(110).
-setMode(110) :- write('--- MODE NORMAL ---'), nl, !.
 
 %% Lletra Invàlida %%
 setMode(X) :- write('Invalid key '), put(X), write(' choose another one'), nl, fail.
@@ -488,7 +491,7 @@ chromatic(N, A, Inputs) :-
   retractall(mode(_)),
 
   % L'usuari escull el mode
-  write('Choose mode ( t: totes | n: normal | f: fast | x: oneSolution ) -> '),
+  write('Choose mode ( t: totes | f: fast | x: oneSolution ) -> '),
   get_single_char(Mode), nl,
   setMode(Mode), !,
 
@@ -567,13 +570,14 @@ mostraVertex([_|LC], Color, Max) :- mostraVertex(LC, Color, Max). % Inmersio
 
 
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % com a query podeu cridar:
 % ?- graf1(N,A), chromatic(N,A,[]).
 % i aixi amb altres grafs que us definiu com els que hi ha a continuacio:
 
+% graf 0 %
+graf0(3, [(1,2),(2,3)]).
 
 % aquest graf te 21 nodes i nombre chromatic 4.
 graf1(11,[(1,2),(1,4),(1,7),(1,9),(2,3),(2,6),(2,8),(3,5),(3,7),(3,10),
@@ -610,3 +614,7 @@ graf3(25,
       (20,2),(21,22),(21,5),(21,1),(22,23),(22,24),(22,25),(22,14),(22,12),(22,10),(22,7),
       (22,2),(23,24),(23,25),(23,22),(23,21),(23,19),(23,18),(23,17),(23,15),(23,13),(23,11),
       (23,8),(23,3),(24,25),(24,23),(24,22),(25,24),(25,23),(25,13)]).
+
+graf4(10,[(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8),(1,9),(1,10),(2,3),(2,4),(2,5),(2,6),(2,7),(2,8),(2,9),
+        (2,10),(3,4),(3,5),(3,6),(3,7),(3,8),(3,9),(3,10),(4,5),(4,6),(4,7),(4,8),(4,9),(4,10),(5,6),(5,7),
+        (5,8),(5,9),(5,10),(6,7),(6,8),(6,9),(6,10),(7,8),(7,9),(7,10),(8,9),(8,10),(9,10)]).
