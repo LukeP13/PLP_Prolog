@@ -493,7 +493,7 @@ chromatic(N, A, Inputs) :-
   setMode(Mode), !,
 
   % Resolem el problema
-  iChromatic(N, 1, A, Inputs),
+  time(iChromatic(N, 1, A, Inputs)),
 
   % Si hem escollit "una solucio" solució, acabem
   (mode(oneSolution) -> !; nl)
