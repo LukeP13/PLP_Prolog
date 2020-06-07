@@ -232,15 +232,15 @@ segColorList(LS, [(A, B)|T], N, RES) :-
 segColorList(LS, [(A, B)|T], N, LSeg) :- segColorList(LS, T, N, LSeg).
 
 
-firstNotIn(L, N, X) :- length(L, Len), N > Len+1, !, fail.
-firstNotIn(L, N, Res) :-
+firstNotIn(L, N, Max, X) :- length(L, Len), N > Len+1, !, fail.
+firstNotIn(L, N, Max, Res) :-
   member(N, L), !,
   NS is N+1,
-  firstNotIn(L, NS, Res).
+  firstNotIn(L, NS, Max, Res).
 
-firstNotIn(L, N, N) :- mode(oneSolution), !.
-firstNotIn(L, N, N). %% Otherwise
-firstNotIn(L, N, X) :- NS is N+1, firstNotIn(L, NS, X).
+firstNotIn(L, N, _, N) :- mode(oneSolution), !.
+firstNotIn(L, N, _, N). %% Otherwise
+firstNotIn(L, N, M, X) :- NS is N+1, firstNotIn(L, NS, M, X).
 
 
 creaArestes(0, Max, Arestes, []) :- !.
@@ -249,7 +249,7 @@ creaArestes(N, Max, Arestes, L) :-
   NS is N-1, !,
   creaArestes(NS, Max, Arestes, LS),
   segColorList(LS, Arestes, N, LSeg),
-  firstNotIn(LSeg, 1, Color),
+  firstNotIn(LSeg, 1, Max, Color),
   L = [(N, Color)|LS].
 
 creaArestes(N, Max, Arestes, L) :-
@@ -258,7 +258,15 @@ creaArestes(N, Max, Arestes, L) :-
   creaArestes(NS, Max, Arestes, LS),
   segColorList(LS, Arestes, N, LSAux),
   sort(LSAux, LSeg), % Eliminem els duplicats
-  firstNotIn(LSeg, 1, Color),
+  firstNotIn(LSeg, 1, Max, Color),
+  L = [(N, Color)|LS].
+
+creaArestes(N, Max, Arestes, L) :-
+  mode(totes),
+  NS is N-1, !,
+  creaArestes(NS, Max, Arestes, LS),
+  segColorList(LS, Arestes, N, LSeg),
+  firstNotIn(LSeg, 1, Max, Color),
   L = [(N, Color)|LS].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -348,20 +356,16 @@ resol(N,K,A, I):- !,
    .
 
 
-setMode(102) :- retractall(mode(_)), setMode(102).
 setMode(102) :- not(mode(fast)), asserta(mode(fast)), setMode(102).
 setMode(102) :- write('-- MODE FAST --'), nl, !.
 
-setMode(120) :- retractall(mode(_)), setMode(120).
 setMode(120) :- not(mode(fast)), asserta(mode(fast)), setMode(120).
 setMode(120) :- not(mode(oneSolution)), asserta(mode(oneSolution)), setMode(120).
 setMode(120) :- write('-- MODE UNA SOLUCIO --'), nl, !.
 
-setMode(116) :- retractall(mode(_)), setMode(116).
-setMode(110) :- not(mode(totes)), asserta(mode(totes)), setMode(110).
-setMode(110) :- write('--- BUSCANT TOTES LES SOLUCIONS, JO EM FARIA UN CAFE... ---'), nl, !.
+setMode(116) :- not(mode(totes)), asserta(mode(totes)), setMode(116).
+setMode(116) :- write('--- BUSCANT TOTES LES SOLUCIONS, JO EM FARIA UN CAFE... ---'), nl, !.
 
-setMode(110) :- retractall(mode(_)), setMode(110).
 setMode(110) :- not(mode(normal)), asserta(mode(normal)), setMode(110).
 setMode(110) :- write('--- MODE NORMAL ---'), nl, !.
 
@@ -374,6 +378,7 @@ setMode(X) :- write('Invalid key '), put(X), write(' choose another one'), nl, f
 % Pista, us pot ser util fer una inmersio amb el nombre de colors permesos.
 chromatic(N, A, Inputs) :- trobat(solucio), retract(trobat(solucio)), !, chromatic(N, A, Inputs).
 chromatic(N, A, Inputs) :-
+  retractall(mode(_)),
   write('Choose mode (n: normal | t: totes | f: fast | x: oneSolution) -> '),
   get_single_char(Mode), nl, format('~w', [Mode]),
   setMode(Mode), !,
