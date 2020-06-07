@@ -231,8 +231,8 @@ segColorList(LS, [(A, B)|T], N, RES) :-
 
 segColorList(LS, [(A, B)|T], N, LSeg) :- segColorList(LS, T, N, LSeg).
 
-
-firstNotIn(L, N, Max, X) :- length(L, Len), N > Len+1, !, fail.
+firstNotIn(L, N, Max, X) :- mode(totes), N > Max, !, fail.
+firstNotIn(L, N, Max, X) :- not(mode(totes)), length(L, Len), N > Len+1, !, fail.
 firstNotIn(L, N, Max, Res) :-
   member(N, L), !,
   NS is N+1,
@@ -263,7 +263,7 @@ creaArestes(N, Max, Arestes, L) :-
 
 creaArestes(N, Max, Arestes, L) :-
   mode(totes),
-  NS is N-1, !,
+  NS is N-1,
   creaArestes(NS, Max, Arestes, LS),
   segColorList(LS, Arestes, N, LSeg),
   firstNotIn(LSeg, 1, Max, Color),
@@ -293,13 +293,6 @@ creaLLV(N, K, LLS, I) :-
   llista(Ini, Fi, L),
   NS is N-1,
   creaLLV(NS, K, [L|LLS], I).
-
-
-null_output_sat(F, L, I) :-
-  open_null_stream(Out),
-  tell(Out),
-  sat(F, L, I), told.
-
 
 %%%%%%
 testCod(X) :- codifica(3,2,[(1,3),(2,3)],[], X).
@@ -332,7 +325,7 @@ codifica(N,K,Arestes,Inici,C):-
    llistaUnCert(LLV, CNFU),
 
    %crear la CNF que força els colors dels nodes segons Inici
-   inicialitza(LLV, Inici, CNFI),
+   inicialitza(LLV, Inici, CNFI), !,
 
    %crear la CNF que fa que dos nodes que es toquen tinguin colors diferents
    fesMutexes(LLV, Arestes, CNFD),
@@ -376,8 +369,8 @@ setMode(X) :- write('Invalid key '), put(X), write(' choose another one'), nl, f
 % Donat el nombre de nodes,  les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
 % Pista, us pot ser util fer una inmersio amb el nombre de colors permesos.
-chromatic(N, A, Inputs) :- trobat(solucio), retract(trobat(solucio)), !, chromatic(N, A, Inputs).
 chromatic(N, A, Inputs) :-
+  retractall(trobat(_)),
   retractall(mode(_)),
   write('Choose mode (n: normal | t: totes | f: fast | x: oneSolution) -> '),
   get_single_char(Mode), nl, format('~w', [Mode]),
@@ -427,7 +420,7 @@ mostraVertex([_|LC], Color, Max) :- mostraVertex(LC, Color, Max).
 
 
 %%%%%%
-test1() :- chromatic(3,[(1,3),(2,3)],[(1,1)]).
+test1() :- chromatic(3,[(1,3),(2,3),(1,2)],[(1,2),(2,2)]).
 tR() :- chromatic(8, [(1,2),(1,3),(2,5),(5,1)], []).
 test2() :- graf1(N, A), chromatic(N, A, []).
 test3() :- graf2(N, A), chromatic(N, A, []).
