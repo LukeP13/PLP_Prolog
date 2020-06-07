@@ -253,7 +253,8 @@ creaArestes(N, Max, Arestes, L) :-
   L = [(N, Color)|LS].
 
 creaArestes(N, Max, Arestes, L) :-
-  mode(fast),
+  mode(X),
+  member(X, [fast, totes]),
   NS is N-1, !,
   creaArestes(NS, Max, Arestes, LS),
   segColorList(LS, Arestes, N, LSAux),
@@ -261,13 +262,6 @@ creaArestes(N, Max, Arestes, L) :-
   firstNotIn(LSeg, 1, Max, Color),
   L = [(N, Color)|LS].
 
-creaArestes(N, Max, Arestes, L) :-
-  mode(totes),
-  NS is N-1,
-  creaArestes(NS, Max, Arestes, LS),
-  segColorList(LS, Arestes, N, LSeg),
-  firstNotIn(LSeg, 1, Max, Color),
-  L = [(N, Color)|LS].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % fesMutexes(LLV, Arestes, CNF)
@@ -372,10 +366,11 @@ setMode(X) :- write('Invalid key '), put(X), write(' choose another one'), nl, f
 chromatic(N, A, Inputs) :-
   retractall(trobat(_)),
   retractall(mode(_)),
-  write('Choose mode (n: normal | t: totes | f: fast | x: oneSolution) -> '),
-  get_single_char(Mode), nl, format('~w', [Mode]),
-  setMode(Mode), !,
-  iChromatic(N, 1, A, Inputs).
+  write('Choose mode ( t: totes | n: normal | f: fast | x: oneSolution ) -> '),
+  % get_single_char(Mode), nl, format('~w', [Mode]),
+  setMode(120), !,
+  iChromatic(N, 1, A, Inputs),
+  (mode(oneSolution) -> !; nl).
 
 
 iChromatic(N, K, _, _) :- N < K, !, write('\n!!! No sha trobat solucio !!!'), !, fail.
@@ -420,7 +415,7 @@ mostraVertex([_|LC], Color, Max) :- mostraVertex(LC, Color, Max).
 
 
 %%%%%%
-test1() :- chromatic(3,[(1,3),(2,3),(1,2)],[(1,2),(2,2)]).
+test1() :- chromatic(3,[(1,3),(2,3),(1,2)],[(1,2)]).
 tR() :- chromatic(8, [(1,2),(1,3),(2,5),(5,1)], []).
 test2() :- graf1(N, A), chromatic(N, A, []).
 test3() :- graf2(N, A), chromatic(N, A, []).
