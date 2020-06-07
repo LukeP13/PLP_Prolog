@@ -569,6 +569,48 @@ mostraVertex([C|LC], Color, Max) :-
 mostraVertex([_|LC], Color, Max) :- mostraVertex(LC, Color, Max). % Inmersio
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% genera(K, Arestes, N)
+% Donat un nombre cromàtic K:
+% -> El segon paràmetre son les arestes del graf generat
+% -> El tercer paràmetre son el nombre d'arestes del graf
+genera(K, Arestes, N) :-
+  iGenera(K, K, Arestes, N), !.
+
+%%%%%%%%%%%%%%%%
+% iGenera(V, Max, Arestes, N)
+% Funció inmersiva del genera
+iGenera(0, _, [], 0) :- !.
+iGenera(V, Max, A, Max) :-
+  % Genera els seguents
+  VS is V-1,
+  iGenera(VS, Max, AS, NS),
+
+  % Genera les combinacions amb nombre V
+  combinacions(V, Max, AW),
+
+  % Uneix els resultats
+  append(AS, AW, A)
+  .
+
+%%%%%%%%%%%%%%%%%
+% combinacions(Ini, Fi, L)
+% Donat un nombre Inici i un Fi:
+% -> El tercer paràmetre es una llista de parelles de combinacions
+%
+% Exemple: [(Ini, Ini+1), (Ini, Ini+2) .. (Ini, Fi)]
+%
+combinacions(Ini, Fi, []) :- Ini >= Fi, !.
+
+combinacions(Ini, Fi, [(Ini, Fi)|CS]) :-
+  FS is Fi - 1,
+  combinacions(Ini, FS, CS)
+  .
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
