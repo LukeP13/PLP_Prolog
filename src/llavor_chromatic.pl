@@ -1,10 +1,20 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%% DYNAMICS %%%%%%%%%
+%%%%%%%%%%%%%%%%%%% AUTORS %%%%%%%%%%%%%%%%%%%
+%     Lluc Pagès Pérez        u1953628       %
+%    Joel Carrasco Mora       u1955382       %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%% DYNAMICS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Utilitzarem els dynamics per modificar aspectes
+% en temps d'execució:
+% -> trobat(solucio): ens dirà si hem trobat la solució
+% -> mode/1: modificarem el mode d'execució que volem
+
 :- dynamic(trobat/1).
 :- dynamic(mode/1).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%
@@ -41,13 +51,15 @@ tria(F, Lit) :-
     % Si trobem la clàusula unitària l'escollim
     Lit is X;
     % Altrament, escollim el primer booleà o el seu negat
-    [[P|_]|_] = F, invAbs(P, Lit).
+    [[P|_]|_] = F,
+    invAbs(P, Lit)
+    .
 
 
 %%%%%%%%%%%%%%%%%%%%%
 % unitaria(F, Lit)
 % Donat uana CNF,
-% -> El segon parametre qualsevol de les clàusules unitàries
+% -> El segon parametre es qualsevol de les clàusules unitàries
 unitaria(F, Lit) :-
   member(H, F),
   length(H, 1),
@@ -157,9 +169,10 @@ creaCombi(N, [H|T], [[N,H]|F]) :- creaCombi(N, T, F).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % inicialitza(LLV, Ini, CNF)
-%
-%
-inicialitza(_, [], []) :- !.
+% Donat una llista de LLV i una llista dels colors a inicialitzar:
+% -> El tercer parametre es el CNF que fa que es compleixin els colors
+
+inicialitza(_, [], []) :- !. % Aturem inmersio
 
 %Afegim el color que ens demana com a clàusula unitaria per assegurar que es cumplirà
 inicialitza(LLV, [(N, Color)|T], [[NColor]|CNF]) :-
@@ -170,67 +183,145 @@ inicialitza(LLV, [(N, Color)|T], [[NColor]|CNF]) :-
     nth1(Color, LV, NColor),
 
     %Creem el cnf per els seguents vertex
-    inicialitza(LLV, T, CNF).
+    inicialitza(LLV, T, CNF)
+    .
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% inside
-inside(O, S, O, S).
-inside(O, S, S, O).
+% inside(Aresta, O, S)
+% Donada una aresta i un vèrtex origen O:
+% -> Diu si el vertex forma part de l'Aresta i retorna el seguent
+inside((O, S), O, S).
+inside((O, S), S, O).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% hasColor
+% hasColor(LC, V, Color)
+% Donada una llista de colors LC, un vèrtex V:
+% -> El tercer parametre és el color del vertex V dins LC
 hasColor([], _, _) :- !, fail.
 hasColor([(V, Color)|_], V, Color) :- !.
 hasColor([(V, _)|T], V, Color) :- !, fail.
 hasColor([(VS, N)|T], V, Color) :- hasColor(T, V, Color).
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% segColorList
+% segColorList(LS, Arestes, N, LSeg)
+% Donada una llista de parelles (Vertex, Color), una llista de arestes
+% i un Vertex V:
+% -> L'ultim parametre és la llista de colors dels seguents vèrtex de V
+
+% Frenem Inmersio
 segColorList([], _, _, []) :- !.
 segColorList(_, [], _, []) :- !.
-segColorList(LS, [(A, B)|T], N, RES) :-
-  inside(A, B, N, Seg),
-  hasColor(LS, Seg, C), !,
-  segColorList(LS, T, N, LSeg),
-  RES = [C|LSeg].
 
-segColorList(LS, [(A, B)|T], N, LSeg) :- segColorList(LS, T, N, LSeg).
+% Si V forma part d'Aresta
+segColorList(LS, [Aresta|T], V, [C|LSeg]) :-
+  % Comprovem que el vèrtex estigui dins l'aresta
+  inside(Aresta, V, Seg),
+
+  % Agafem el color del Seguent
+  hasColor(LS, Seg, C), !,
+
+  % Comprovem el resta d'arestes
+  segColorList(LS, T, V, LSeg)
+  .
+
+% Si el Vertex no forma part d'Aresta seguim buscant
+segColorList(LS, [_|T], V, LSeg) :- segColorList(LS, T, V, LSeg).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% firstNotIn
+% firstNotIn(L, N, Max, X)
+% Donada una llista de colors, un N inicial i un Màxim de color:
+% -> El quart paràmetre és el color escollit (El primer que està lliure)
+%%%%%
+% **** MODES ****
+% - Totes: Utilitzarem de màxim el nombre Max, que serà el nombre d'Arestes
+%          en el nostre cas particular, això ens donarà totes les possibles
+%          respostes.
+%
+% - OneSolution: Tallarem al primer nombre trobat, donarà la resposta mes
+%                ràpida, però no ens assegura trobar solució, ni ferho amb
+%                el mínim nombre chromatic
+%
+% - Otherwise: Tallarem al superar la longitud de L, que és el nombre d'arestes
+%              (o colors diferents).
+%
+
+% Tallem les possibles solucions
 firstNotIn(L, N, Max, X) :- mode(totes), N > Max, !, fail.
 firstNotIn(L, N, Max, X) :- not(mode(totes)), length(L, Len), N > Len+1, !, fail.
+
+% Part principal - Si N és dins L, busquem el seguent
 firstNotIn(L, N, Max, Res) :-
   member(N, L), !,
   NS is N+1,
-  firstNotIn(L, NS, Max, Res).
+  firstNotIn(L, NS, Max, Res)
+  .
 
-firstNotIn(L, N, _, N) :- mode(oneSolution), !.
-firstNotIn(L, N, _, N). %% Otherwise
+% Si hem trobat un no "membre" el retornem
+firstNotIn(L, N, _, N) :- mode(oneSolution), !. % Mode OneSolution
+firstNotIn(L, N, _, N).                         % Otherwise
+
+% Tot i que sigui membre, també podriem trobar altres colors possibles
 firstNotIn(L, N, M, X) :- NS is N+1, firstNotIn(L, NS, M, X).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % triaColors(N, Max, Arestes, L)
+% Donat un nombre de vertex, un maxim de colors i una llista d'Arestes:
+% -> l'últim paràmetre és una llista de parelles de (vertex, color) tal que
+%    cada vertex tingui un color diferent als seus adjacents
+%
+%  **** MODES ****
+%  - Totes: El color dels vertex pot ser qualsevol d'entre 1 i
+%           el nombre de vertex
+%
+%  - Normal: El color dels vertex pot arribar com a màxim al nombre
+%            de vèrtex adjacents que té
+%
+%  - Fast: El color dels vertex pot arribar com a màxim al nombre de
+%          colors diferents dels seus adjacents
+%
+
+% Amb 0 vèrtex tenim 0 colors, para inmersio
 triaColors(0, Max, Arestes, []) :- !.
-triaColors(N, Max, Arestes, L) :-
-  mode(normal),
-  NS is N-1, !,
-  triaColors(NS, Max, Arestes, LS),
-  segColorList(LS, Arestes, N, LSeg),
-  firstNotIn(LSeg, 1, Max, Color),
-  L = [(N, Color)|LS].
 
-triaColors(N, Max, Arestes, L) :-
+% MODE TOTES/NORMAL
+triaColors(N, Max, Arestes, [(N, Color)|LS]) :-
+  % Comprovem que estigui en mode totes o normal
   mode(X),
-  member(X, [fast, totes]),
+  member(X, [totes, normal]),
 
+  % Triem els colors dels seguents vèrtex
   NS is N-1, !,
   triaColors(NS, Max, Arestes, LS),
+
+  % Creem la llista de colors dels vèrtex seguents
+  segColorList(LS, Arestes, N, LSeg),
+
+  % Triem un color
+  firstNotIn(LSeg, 1, Max, Color)
+  .
+
+% MODE FAST
+triaColors(N, Max, Arestes, [(N, Color)|LS]) :-
+  % Comprovem que estigui en mode fast
+  mode(fast),
+
+  % Triem els colors dels seguents vertex
+  NS is N-1, !,
+  triaColors(NS, Max, Arestes, LS),
+
+  % Creem la llista de colors dels vèrtex seguents
   segColorList(LS, Arestes, N, LSAux),
-  sort(LSAux, LSeg), % Eliminem els duplicats
-  firstNotIn(LSeg, 1, Max, Color),
-  L = [(N, Color)|LS].
+
+  % Eliminem els duplicats
+  sort(LSAux, LSeg),
+
+  % Triem un color
+  firstNotIn(LSeg, 1, Max, Color)
+  .
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -249,6 +340,7 @@ fesMutexes(LLV, Arestes, CNF) :-
   % Creem el CNF amb els colors trobats
   inicialitza(LLV, LS, CNF).
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % llista(Inici, Fi, L)
 % Donat una nombre Inici i un Fi:
@@ -260,6 +352,7 @@ llista(F, F, []) :- !. % Si els nombres son iguals
 llista(I, F, [I|LS]) :-
   IS is I+1,
   llista(IS, F, LS). % Inmersio
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % creaLLV(LLT, LLV)
