@@ -236,9 +236,6 @@ segColorList(LS, [_|T], V, LSeg) :- segColorList(LS, T, V, LSeg).
 % -> El quart paràmetre és el color escollit (El primer que està lliure)
 %%%%%
 % **** MODES ****
-% - Totes: Utilitzarem de màxim el nombre Max, que serà el nombre d'Arestes
-%          en el nostre cas particular, això ens donarà totes les possibles
-%          respostes.
 %
 % - OneSolution: Tallarem al primer nombre trobat, donarà la resposta mes
 %                ràpida, però no ens assegura trobar solució, ni ferho amb
@@ -249,8 +246,7 @@ segColorList(LS, [_|T], V, LSeg) :- segColorList(LS, T, V, LSeg).
 %
 
 % Tallem les possibles solucions
-firstNotIn(L, N, Max, X) :- mode(totes), N > Max, !, fail.
-firstNotIn(L, N, Max, X) :- not(mode(totes)), length(L, Len), N > Len+1, !, fail.
+firstNotIn(L, N, Max, X) :- length(L, Len), N > Len+1, !, fail.
 
 % Part principal - Si N és dins L, busquem el seguent
 firstNotIn(L, N, Max, Res) :-
@@ -274,8 +270,6 @@ firstNotIn(L, N, M, X) :- NS is N+1, firstNotIn(L, NS, M, X).
 %    cada vertex tingui un color diferent als seus adjacents
 %
 %  **** MODES ****
-%  - Totes: El color dels vertex pot ser qualsevol d'entre 1 i
-%           el nombre de vertex
 %
 %  - Fast: El color dels vertex pot arribar com a màxim al nombre de
 %          colors diferents dels seus adjacents
@@ -573,7 +567,6 @@ mostraVertex([C|LC], Color, Max) :-
   .
 
 mostraVertex([_|LC], Color, Max) :- mostraVertex(LC, Color, Max). % Inmersio
-
 
 
 
