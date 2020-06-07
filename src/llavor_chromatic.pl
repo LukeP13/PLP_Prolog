@@ -170,7 +170,50 @@ inicialitza(LLV, [(N, Color)|T], [[NColor]|CNF]) :-
     %Unim les llistes
     append(CNFun, CNFresta, CNF).
 
-%--------------------------------- DONE FINS AQUI ----------------------------------%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% llista(LLT, CNF)
+% Donat una llista de llistes de booleans:
+% -> el segon paràmetre serà el cnf resultant
+llista(F, F, []) :- !.
+llista(I, F, [I|LS]) :-
+  IS is I+1,
+  llista(IS, F, LS).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% creaLLV(LLT, LLV)
+% Donat un nombre de vertex, i un nombre de vectors
+% -> el tercer paràmetre l'anirem actualitzant
+% -> el quart paràmetre serà el LLV resultant
+creaLLV(0, _, I, I) :- !.
+creaLLV(N, K, LLS, I) :-
+  Ini is ((N-1)*K)+1,
+  Fi is Ini+K,
+  llista(Ini, Fi, L),
+  NS is N-1,
+  creaLLV(NS, K, [L|LLS], I).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% llistaUnCert(LLT, CNF)
+% Donat una llista de llistes de booleans:
+% -> el segon paràmetre serà el cnf resultant
+llistaUnCert([], []) :- !.
+llistaUnCert([L|LT], CNF) :-
+  unCert(L, FA),
+  llistaUnCert(LT, FS),
+  append(FA, FS, CNF), !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% append3(A, B, C, Res)
+% Donat 3 llistes:
+% -> Res serà el resultat de unirles totes.
+append3(A, B, C, Res) :-
+  append(A, B, Aux),
+  append(Aux, C, Res).
+
 
 %%%%%%%%%%%%%%%%%%%
 % els nodes del graph son nombres consecutius d'1 a N.
@@ -178,12 +221,21 @@ inicialitza(LLV, [(N, Color)|T], [[NColor]|CNF]) :-
 % Arestes es la llista d'arestes del graph com a parelles de nodes
 % Inici es la llista de parelles (node,num_color) que s'han de forçar
 % C sera la CNF que codifica graph coloring problem pel graph donat
-codifica(N,K,Arestes,Inici,C):-!.
+codifica(N,K,Arestes,Inici,C):-
    %crear la llista de llistes de variables pels colors de cada node
+   creaLLV(N, K, [], LLV),
+
    %crear la CNF que fa que cada node tingui un color
+   llistaUnCert(LLV, CNFU),
+
    %crear la CNF que força els colors dels nodes segons Inici
+   inicialitza(LLV, Inici, CNFI),
+
    %crear la CNF que fa que dos nodes que es toquen tinguin colors diferents
+   fesMutexes(LLV, Arestes, CNFD),
+
    %C sera el resultat d'ajuntar les CNF creades
+   append3(CNFU, CNFI, CNFD, C).
 
 
 
@@ -191,21 +243,66 @@ codifica(N,K,Arestes,Inici,C):-!.
 % resolGraf(N,A,K,Inputs)
 % Donat el nombre de nodes, el nombre de colors, les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
-
-resol(N,K,A, I):-
-   codifica(...),
-   write('SAT Solving ..................................'), nl,
-   %crida a SAT
-   write('Graph (color number per node in order: '), nl
-   %mostrar el resultat
-   .
-
+resol(N,K,A, I):- !,
+  codifica(N, K, A, I, C),
+  write('SAT Solving ..................................'), nl,
+  sat(C, [], Sol),
+  write('Graph (color number per node in order): '), nl,
+  %mostrar el resultat
+  mostraSol(Sol, K, 1)
+  .
 
 %%%%%%%%%%%%%%%%%%%%
 % chromatic(N,A,Inputs)
 % Donat el nombre de nodes,  les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
 % Pista, us pot ser util fer una inmersio amb el nombre de colors permesos.
+chromatic(N, A, Inputs) :- iChromatic(N, 1, A, Inputs).
+
+%%%%%%%%%%%%%%%%%%%
+% iChromatic(N, K, A, I)
+% Funció inmersiva de chromatic/3, busca el nombre chromatic
+iChromatic(N, K, _, _, 0) :- N < K, !, write('\n!!! No sha trobat solucio !!!'), !, fail.
+iChromatic(N, K, A, I) :- resol(N, K, A, I).
+iChromatic(N, K, A, I) :- KS is K+1, iChromatic(N, KS, A, I).
+
+
+%%%%%%%%%%%%%%%%%%%%
+% mostraSol(Sol, Max, N)
+% Donada una Solució i un nombre de colors:
+% -> Mostra la solució per pantalla
+% -> Utilitza
+mostraSol(_, Max, N) :- Max < N, !.
+mostraSol(Sol, Max, N) :-
+  % Mostrem el color N
+  format('color ~w: ', [N]),
+
+  % Mostrem tots els Vèrtex que son del color N
+  mostraVertex(Sol, N, Max), !,
+
+  %Mostrem el següent color
+  NS is N+1,
+  mostraSol(Sol, Max, NS).
+
+
+%%%%%%%%%%%%%%%%%%%%
+% mostraSol(Sol, Max, N)
+% Donada una Solució i un nombre de colors:
+% -> Mostra la solució per pantalla
+% -> Utilitza
+mostraVertex([], _, _) :- nl, !.
+
+mostraVertex([C|LC], Color, Max) :-
+  C > 0,
+  Color-1 =:= (C-1) mod Max,
+  V is (C-1)//Max + 1,
+  format(' ~w ',[V]),
+  mostraVertex(LC, Color, Max).
+
+mostraVertex([_|LC], Color, Max) :- mostraVertex(LC, Color, Max).
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
